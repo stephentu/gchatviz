@@ -46,14 +46,19 @@ if __name__ == '__main__':
   if stat != 'OK':
     error("Could not open chats folder: " + msg)
 
-  stat, msg = mail.search(None, 'FROM', '"%s"' % (args.target_username))
+  # get all mail
+  stat, msg = mail.search(None, "ALL")
   if stat != 'OK':
     error("Could not search folder for target user: " + msg)
-  stat, msg1 = mail.search(None, 'TO', '"%s"' % (args.target_username))
-  if stat != 'OK':
-    error("Could not search folder for target user: " + msg)
+  # stat, msg = mail.search(None, 'FROM', '"%s"' % (args.target_username))
+  # if stat != 'OK':
+  #   error("Could not search folder for target user: " + msg)
+  # stat, msg1 = mail.search(None, 'TO', '"%s"' % (args.target_username))
+  # if stat != 'OK':
+  #   error("Could not search folder for target user: " + msg)
 
-  ids = msg[0].split() + msg1[0].split() # space delimited ids
+  #ids = msg[0].split() + msg1[0].split() # space delimited ids
+  ids = msg[0].split()
   total_msgs = len(ids)
   info('Found %d conversations, but limiting to [%d, %d)' % (
     total_msgs, args.offset, args.offset + args.limit))
@@ -96,7 +101,7 @@ if __name__ == '__main__':
       chatmsgs.append(xmlmsg)
 
     completed += 1
-    if (completed % 10) == 0:
+    if (completed % 1000) == 0:
       info('Finished downloading %d/%d message' % (completed, len(ids)))
 
   with open(args.outfile, 'w') as outfp:
