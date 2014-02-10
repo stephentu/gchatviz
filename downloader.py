@@ -47,7 +47,8 @@ if __name__ == '__main__':
     error("Could not open chats folder: " + msg)
 
   # get all mail
-  stat, msg = mail.search(None, "ALL")
+
+  stat, msg = mail.search(None, "All")
   if stat != 'OK':
     error("Could not search folder for target user: " + msg)
   # stat, msg = mail.search(None, 'FROM', '"%s"' % (args.target_username))
@@ -67,6 +68,7 @@ if __name__ == '__main__':
   chatmsgs = []
   completed = 0
   for idx in ids:
+
     # XXX: do in parallel
     stat, fetchmsg = mail.fetch(idx, '(RFC822)')
     if stat != 'OK':
