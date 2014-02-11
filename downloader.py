@@ -7,6 +7,7 @@ import imaplib
 import email
 import argparse
 import pickle
+import time
 
 def error(msg, exitcode=1):
   print >>sys.stderr, '[ERROR]', msg
@@ -20,59 +21,14 @@ def saveresults(results, outfp):
   pickle.dump(results, outfp)
   outfp.flush()
 
-if __name__ == '__main__':
-  p = argparse.ArgumentParser()
-  p.add_argument('--username', required=True)
-  p.add_argument('--password', required=True) # XXX: don't take from command line
-  p.add_argument('--target-username', required=True)
-  p.add_argument('--outfile', required=True)
-  p.add_argument('--limit', type=int, default=100)
-  p.add_argument('--offset', type=int, default=0)
-  args = p.parse_args()
-
-  if args.limit <= 0:
-    error("--limit must be > 0")
-
-  if args.offset < 0:
-    error('--offset must be >= 0') # XXX: support -N offsets
-
-  with open(args.outfile, 'w') as testfp:
-    # just testing to make sure we can open
-    pass
-
-  mail = imaplib.IMAP4_SSL('imap.gmail.com')
-  mail.login(args.username, args.password)
-  stat, msg = mail.select('[Gmail]/Chats', True)
-  if stat != 'OK':
-    error("Could not open chats folder: " + msg)
-
-  # get all mail
-
-  stat, msg = mail.search(None, "All")
-  if stat != 'OK':
-    error("Could not search folder for target user: " + msg)
-  # stat, msg = mail.search(None, 'FROM', '"%s"' % (args.target_username))
-  # if stat != 'OK':
-  #   error("Could not search folder for target user: " + msg)
-  # stat, msg1 = mail.search(None, 'TO', '"%s"' % (args.target_username))
-  # if stat != 'OK':
-  #   error("Could not search folder for target user: " + msg)
-
-  #ids = msg[0].split() + msg1[0].split() # space delimited ids
-  ids = msg[0].split()
-  total_msgs = len(ids)
-  info('Found %d conversations, but limiting to [%d, %d)' % (
-    total_msgs, args.offset, args.offset + args.limit))
-  ids = ids[args.offset : args.offset + args.limit]
-
+def execute(mail, chunk_ids,  outfile):
   chatmsgs = []
   completed = 0
-  for idx in ids:
+  for idx in chunk_ids:
 
-    # XXX: do in parallel
     stat, fetchmsg = mail.fetch(idx, '(RFC822)')
     if stat != 'OK':
-      with open(args.outfile, 'w') as outfp:
+      with open(outfile, 'w') as outfp:
         saveresults(chatmsgs, outfp)
       error('Could not fetch email with ID %s: %s' % (idx, fetchmsg))
     msg = email.message_from_string(fetchmsg[0][1])
@@ -103,8 +59,97 @@ if __name__ == '__main__':
       chatmsgs.append(xmlmsg)
 
     completed += 1
-    if (completed % 1000) == 0:
-      info('Finished downloading %d/%d message' % (completed, len(ids)))
+    if (completed % 200) == 0:
+      info('Chunk finished downloading %d/%d messages' % (completed, len(chunk_ids)))
 
-  with open(args.outfile, 'w') as outfp:
+  with open(outfile , 'w') as outfp:
     saveresults(chatmsgs, outfp)
+
+
+def download(args):
+
+  if not args.password:
+    import getpass
+    args.password = getpass.getpass("Password:")
+
+  if args.limit <= 0:
+    error("--limit must be > 0")
+
+  if args.offset < 0:
+    error('--offset must be >= 0') # XXX: support -N offsets
+
+  with open(args.outfile, 'w') as testfp:
+    # just testing to make sure we can open
+    pass
+
+  mail = imaplib.IMAP4_SSL('imap.gmail.com')
+  mail.login(args.username, args.password)
+  stat, msg = mail.select('[Gmail]/Chats', True)
+  if stat != 'OK':
+    error("Could not open chats folder: " + msg)
+
+  # get all mail
+  ids = []
+  stat, msg = mail.search(None, "All")
+  if stat != 'OK':
+    error("Could not search folder for target user: " + msg)
+
+  # search for mail from/to a target username
+  if args.target_username:
+    stat, msg = mail.search(None, 'FROM', '"%s"' % (args.target_username))
+    if stat != 'OK':
+      error("Could not search folder for target user: " + msg)
+    stat, msg1 = mail.search(None, 'TO', '"%s"' % (args.target_username))
+    if stat != 'OK':
+      error("Could not search folder for target user: " + msg)
+    ids = msg[0].split() + msg1[0].split() # space delimited ids
+
+  # or just get all mail
+  else:
+    ids = msg[0].split()
+    total_msgs = len(ids)
+    info('Found %d conversations, but limiting to [%d, %d)' % (
+      total_msgs, args.offset, args.offset + args.limit))
+    ids = ids[args.offset : args.offset + args.limit]
+
+  if args.chunksize >= len(ids):
+    execute(mail, ids, args.outfile)
+  else:
+    num_chunks = len(ids) / args.chunksize
+    for i in xrange(num_chunks):
+      start = args.chunksize * i
+      if i + 1 == num_chunks:
+        chunk_ids = ids[start:] 
+      else:
+        chunk_ids = ids[start : start + args.chunksize]
+      execute(mail, chunk_ids, args.outfile + str(i))
+      info('Messages %d - %d  out of %d total messages have been downloaded' % ( start + 1, start + args.chunksize , len(ids)))
+      time.sleep(1)
+
+  # merge into one big file
+  from glob import iglob
+  import shutil
+  import os
+  import ntpath
+
+  destination = open(args.outfile +'_fulldownload', 'wb')
+  for i in xrange(num_chunks):
+    filename = iglob(os.path.dirname(os.path.realpath(args.outfile + str(i))))
+    shutil.copyfileobj(open(filename, 'rb'), destination)
+  destination.close()
+
+
+if __name__ == '__main__':
+  p = argparse.ArgumentParser()
+  p.add_argument('--username', required=True)
+  p.add_argument('--password', required=False) 
+  p.add_argument('--target-username', required=False)
+  p.add_argument('--outfile', required=True)
+  p.add_argument('--limit', type=int, default=100)
+  p.add_argument('--offset', type=int, default=0)
+  p.add_argument('--chunksize',type=int,default=1000)
+  args = p.parse_args()
+  
+  download(args)
+
+
