@@ -1,8 +1,8 @@
 #!/bin/bash
 
-mkdir rawchats
-mkdir convertedchats
-mkdir analyzed
+mkdir -p rawchats
+mkdir -p convertedchats
+mkdir -p analyzed
 
 python downloader.py --outfile rawchats/tmp
 ./batch_convert.sh
