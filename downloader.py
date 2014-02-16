@@ -68,19 +68,22 @@ def execute(mail, chunk_ids,  outfile):
 
 def download(args):
 
+  if not args.username:
+    args.username = raw_input("Google email address (i.e. johndoe@gmail.com):  ")
+
   if not args.password:
     import getpass
-    args.password = getpass.getpass("Password:")
+    args.password = getpass.getpass("Gmail password (will appear as invisible):  ")
 
-  if args.limit <= 0:
+  if args.limit and args.limit <= 0:
     error("--limit must be > 0")
 
   if args.offset < 0:
     error('--offset must be >= 0') # XXX: support -N offsets
 
-  with open(args.outfile, 'w') as testfp:
+  #with open(args.outfile, 'w') as testfp:
     # just testing to make sure we can open
-    pass
+    #pass
 
   mail = imaplib.IMAP4_SSL('imap.gmail.com')
   mail.login(args.username, args.password)
@@ -108,7 +111,11 @@ def download(args):
   else:
     ids = msg[0].split()
     total_msgs = len(ids)
-    info('Found %d conversations, but limiting to [%d, %d)' % (
+
+    # read all the messages if limit not set
+    if not args.limit:
+      args.limit = total_msgs
+    info('Found %d conversations, and limiting to [%d, %d)' % (
       total_msgs, args.offset, args.offset + args.limit))
     ids = ids[args.offset : args.offset + args.limit]
 
@@ -116,36 +123,28 @@ def download(args):
     execute(mail, ids, args.outfile)
   else:
     num_chunks = len(ids) / args.chunksize
+    info("Splitting chats into %d chunks..." % (num_chunks))
     for i in xrange(num_chunks):
       start = args.chunksize * i
       if i + 1 == num_chunks:
         chunk_ids = ids[start:] 
       else:
         chunk_ids = ids[start : start + args.chunksize]
+      info('Chunk # %d starting to download messages %d - %d...' % (i + 1, start + 1, start + args.chunksize))
       execute(mail, chunk_ids, args.outfile + str(i))
       info('Messages %d - %d  out of %d total messages have been downloaded' % ( start + 1, start + args.chunksize , len(ids)))
       time.sleep(1)
 
-  # merge into one big file
-  from glob import iglob
-  import shutil
-  import os
-  import ntpath
 
-  destination = open(args.outfile +'_fulldownload', 'wb')
-  for i in xrange(num_chunks):
-    filename = iglob(os.path.dirname(os.path.realpath(args.outfile + str(i))))
-    shutil.copyfileobj(open(filename, 'rb'), destination)
-  destination.close()
 
 
 if __name__ == '__main__':
   p = argparse.ArgumentParser()
-  p.add_argument('--username', required=True)
+  p.add_argument('--username', required=False)
   p.add_argument('--password', required=False) 
   p.add_argument('--target-username', required=False)
   p.add_argument('--outfile', required=True)
-  p.add_argument('--limit', type=int, default=100)
+  p.add_argument('--limit', type=int, required=False)
   p.add_argument('--offset', type=int, default=0)
   p.add_argument('--chunksize',type=int,default=1000)
   args = p.parse_args()

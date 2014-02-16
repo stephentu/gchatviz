@@ -10,6 +10,7 @@ import errno
 import itertools as it
 import numpy
 import csv
+import ntpath
 from datetime import datetime as dt
 from datetime import time as dtime
 
@@ -45,33 +46,63 @@ def groupby(dates):
     m[d] = m.get(d, 0) + 1
   return sorted(m.iteritems())
 
-def write_tocsv(messages, outfile):
+def write_messages(messages, outfile, hidemessages):
+  sorted_bydate = sorted(messages, key=lambda m: m._date)
   with open(outfile, "w") as out:
     writer = csv.writer(out)
     writer.writerow(["sender","message","datetime"])
-    for m in messages:
-      row = [m._fromuser, m._message.replace('\n', ' '), clean_date(str(m._date))]
+    for m in sorted_bydate:
+      if hidemessages:
+        mess = get_hidden(m._message)
+      else:
+        mess = m._message
+      row = [m._fromuser, mess.replace('\n', ' '), clean_date(str(m._date))]
       writer.writerow(row)
+
+def get_hidden(message):
+  import re
+  hidden = re.sub('\S','x', message)
+  return hidden
+
+def write_stats(stats, outfile):
+  with open(outfile, "w") as out:
+    out.write(str(stats))
 
 def clean_date(date):
   without_microseconds = date.split('.')[0]
   time = without_microseconds.split(" ")[1]
   if "-" in time:
     to_remove = time.split("-")[1]
-    return without_microseconds.replace(to_remove, '')
+    return without_microseconds.replace("-" + to_remove, '')
   else:
     return without_microseconds
 
-def getdatestats(messages):
+def getstats(messages, sender = ""):
+  # chats per day
   dateinfo = [m._date.date() for m in messages]
+  ts = groupby(dateinfo)
+  msgcounts = [x[1] for x in ts]
   stats = {}
-  stats["chatsperday"] = avgchatsperday(dates)
+  stats["chats"] = {"avg": numpy.average(msgcounts), "min": numpy.min(msgcounts), "max": numpy.max(msgcounts)}
+  
+  # chats per day from a particular sender
+  if sender:
+    fromsender = filter_bysender(messages, sender)
+    dateinfo_fromsender = [m._date.date() for m in fromsender]
+    ts_fromsender = groupby(dateinfo_fromsender)
+    msgcounts_fromsender = [x[1] for x in ts_fromsender]
+    stats["chats_fromme"] = {"avg": numpy.average(msgcounts_fromsender), "min": numpy.min(msgcounts_fromsender), "max": numpy.max(msgcounts_fromsender)}
 
-def avgchatsperday(dates):
-  ts = groupby(dates)
-  return numpy.average([x[1] for x in ts])
+  return stats
 
-def plot(messages, infile, outfolder):
+def filter_bysender(messages, sender):
+  filtered = []
+  for m in messages:
+    if sender in m._fromuser:
+      filtered.append(m)
+  return filtered
+
+def plot(messages, outfolder):
       # count messages sent by user
   msg_counts = {}
   word_counts = {}
@@ -83,14 +114,14 @@ def plot(messages, infile, outfolder):
 
   dateinfo = [m._date.date() for m in messages]
   fig = plotbydate(dateinfo)
-  fig.savefig(os.path.join(outfolder, infile + '_activity-date.pdf'))
+  fig.savefig(os.path.join(outfolder, 'activity-date.pdf'))
 
   fig = plotbyavgtime([m._date for m in messages])
-  fig.savefig(os.path.join(outfolder, infile + '_activity-time.pdf'))
+  fig.savefig(os.path.join(outfolder, 'activity-time.pdf'))
 
 def plotbydate(dates):
   ts = groupby(dates)
-  print argmax(ts, lambda x: x[1])
+  #print argmax(ts, lambda x: x[1])
 
   years = YearLocator()
   months = MonthLocator()
@@ -163,19 +194,29 @@ def plotbyavgtime(datetimes):
 
   return fig
 
+
+def path_leaf(path):
+    head, tail = ntpath.split(path)
+    return tail or ntpath.basename(head)
+
 if __name__ == '__main__':
   p = argparse.ArgumentParser()
-  p.add_argument('--infile', required=True)
+  p.add_argument('--infolder', required=True)
   p.add_argument('--outfolder', required=True)
-  p.add_argument('--plot', action='store_true')
   p.add_argument('--msg', action='store_true')
-  p.add_argument('--stats', action='store_true')
+  p.add_argument('--hidemessages', action='store_true') # additional option for --msg
+  p.add_argument('--plot', action='store_true')
+  p.add_argument('--stats', action='store_true') 
+  p.add_argument('--fromsender', required=False) # additional option for --stats
   args = p.parse_args()
 
   mkdirp(args.outfolder)
 
-  with open(args.infile, 'r') as infp:
-    d = pickle.load(infp)
+  print "grabbing messages..."
+  d = []
+  for infile in os.listdir(args.infolder):
+    with open(os.path.join(args.infolder, infile), 'r') as infp:
+      d +=  pickle.load(infp)
 
   # XXX: hacky-- add timezone info
   tz = pytz.timezone('US/Pacific')
@@ -188,15 +229,20 @@ if __name__ == '__main__':
 
   if args.msg:
     print "processing message data..."
-    write_tocsv(d, os.path.join(args.outfolder, args.infile.split("/")[1] + "_messagedata.csv"))
+    write_messages(d, os.path.join(args.outfolder, "messagedata.csv"), args.hidemessages)
 
   if args.plot:
     print "plotting..."
-    plot(messages, args.infile, args.outfolder)
+    plot(messages, args.outfolder)
 
   if args.stats:
     print "getting statistics..."
-    getdatestats(messages)
+    if not args.fromsender:
+      args.fromsender = raw_input('Google email address (i.e. johndoe@gmail.com):  ')
+    stats = getstats(messages, args.fromsender)
+    print stats
+    write_stats(stats, os.path.join(args.outfolder, "stats"))
+
   # write to text file
   #with open(outfile, 'w') as outfp:
   #  for m in d:

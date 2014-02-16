@@ -1,5 +1,18 @@
 gchat conversation visualizer
 =============================
 
-Some flaky scripts to visualize chat history between you and a person via
-gchat.
+Some flaky scripts to log and visualize your chat history via gchat.
+
+Allow permissions on these bash scripts:
+
+> sudo chmod 777 getchats.sh
+> sudo chmod 777 batch_convert.sh
+...
+
+Then run the script:
+
+> ./getchats.sh
+
+You will be prompted to enter your gmail email address and password. The final data will be downloaded to the file called "analyzed".
+
+
