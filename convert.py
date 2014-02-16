@@ -30,6 +30,7 @@ if __name__ == '__main__':
   msgs = []
   for m in d:
     if type(m) == dict:
+
       msg = message(
           extractemail_emailformat(m['from']),
           extractemail_emailformat(m['to']),
@@ -42,7 +43,6 @@ if __name__ == '__main__':
       for msg in conv:
         fromuser = msg.attrib['from']
         touser = msg.attrib['to']
-
         bodynode = msg.findtext('{jabber:client}body')
         if bodynode is None:
           # some sort of archive message, ignore it
