@@ -8,6 +8,7 @@ import email
 import argparse
 import pickle
 import time
+import os
 
 def error(msg, exitcode=1):
   print >>sys.stderr, '[ERROR]', msg
@@ -81,9 +82,10 @@ def download(args):
   if args.offset < 0:
     error('--offset must be >= 0') # XXX: support -N offsets
 
-  #with open(args.outfile, 'w') as testfp:
-    # just testing to make sure we can open
-    #pass
+  # just testing to make sure we can open, then delete the file
+  with open(args.outfile, 'w') as testfp:
+    pass
+  os.remove(args.outfile)
 
   mail = imaplib.IMAP4_SSL('imap.gmail.com')
   mail.login(args.username, args.password)
