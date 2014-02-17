@@ -1,9 +1,11 @@
 #!/bin/bash
-
-mkdir -p rawchats
-mkdir -p convertedchats
-mkdir -p analyzed
-
-python downloader.py --outfile rawchats/tmp
-./batch_convert.sh
-python analyze.py --infolder convertedchats/ --outfolder analyzed/ --plot --msg --hidemessages --stats
+source config.sh
+mkdir -p rawchats convertedchats analyzed
+$PYTHON downloader.py --outfile rawchats/tmp
+FILES=rawchats/*
+for f in $FILES
+do
+	echo "converting $f..." 
+	$PYTHON convert.py $f convertedchats/${f##*/}
+done
+$PYTHON analyze.py --infolder convertedchats/ --outfolder analyzed/ --plot --msg --hidemessages --stats
