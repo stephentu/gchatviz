@@ -93,6 +93,8 @@ def download(args):
   if stat != 'OK':
     error("Could not open chats folder: " + msg)
 
+  #import pdb; pdb.set_trace()
+
   # get all mail
   ids = []
   stat, msg = mail.search(None, "All")
@@ -129,7 +131,7 @@ def download(args):
     for i in xrange(num_chunks):
       start = args.chunksize * i
       if i + 1 == num_chunks:
-        chunk_ids = ids[start:] 
+        chunk_ids = ids[start:]
       else:
         chunk_ids = ids[start : start + args.chunksize]
       info('Chunk # %d starting to download messages %d - %d...' % (i + 1, start + 1, start + args.chunksize))
@@ -137,20 +139,15 @@ def download(args):
       info('Messages %d - %d  out of %d total messages have been downloaded' % ( start + 1, start + args.chunksize , len(ids)))
       time.sleep(1)
 
-
-
-
 if __name__ == '__main__':
   p = argparse.ArgumentParser()
   p.add_argument('--username', required=False)
-  p.add_argument('--password', required=False) 
+  p.add_argument('--password', required=False)
   p.add_argument('--target-username', required=False)
   p.add_argument('--outfile', required=True)
   p.add_argument('--limit', type=int, required=False)
   p.add_argument('--offset', type=int, default=0)
   p.add_argument('--chunksize',type=int,default=1000)
   args = p.parse_args()
-  
+
   download(args)
-
-
