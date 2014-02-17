@@ -11,6 +11,7 @@ import itertools as it
 import numpy
 import csv
 import ntpath
+import hashlib, uuid
 from datetime import datetime as dt
 from datetime import time as dtime
 
@@ -46,19 +47,40 @@ def groupby(dates):
     m[d] = m.get(d, 0) + 1
   return sorted(m.iteritems())
 
-def write_messages(messages, outfile, hidemessages):
+def write_messages(messages, outfile, anonymize, fromsender):
+  uids = {}
+
   sorted_bydate = sorted(messages, key=lambda m: m._date)
   with open(outfile, "w") as out:
     writer = csv.writer(out)
     writer.writerow(["sender","message","datetime"])
     for m in sorted_bydate:
-      if hidemessages:
-        mess = get_hidden(m._message)
+      if anonymize:
+        mess = get_hidden(m._message) # hide message
+        if fromsender in m._fromuser: # hide sender (unless chat is authored by fromsender)
+          author = m._fromuser
+        else:
+          author = get_hash(m._fromuser, uids)
       else:
         mess = m._message
-      row = [m._fromuser, mess.replace('\n', ' '), clean_date(str(m._date))]
+        author = m._fromuser
+      row = [author, mess.replace('\n', ' '), clean_date(str(m._date))]
       writer.writerow(row)
 
+# Returns a unique ID for the user
+# uids: a dictionary of existing users to ids
+def get_hash(user, uids):
+  if user in uids.keys():
+    return uids[user]
+  elif not uids.keys():
+    uids[user] = 1
+    return 1
+  else:
+    new_uid = numpy.max([int(key) for key in uids.values()]) + 1
+    uids[user] = new_uid
+    return new_uid
+
+# Returns a message in anonymized form: i.e. "xxx xxxxxxxxx xx"
 def get_hidden(message):
   import re
   hidden = re.sub('\S','x', message)
@@ -204,10 +226,10 @@ if __name__ == '__main__':
   p.add_argument('--infolder', required=True)
   p.add_argument('--outfolder', required=True)
   p.add_argument('--msg', action='store_true')
-  p.add_argument('--hidemessages', action='store_true') # additional option for --msg
+  p.add_argument('--anonymize', action='store_true') # additional option for --msg
   p.add_argument('--plot', action='store_true')
   p.add_argument('--stats', action='store_true') 
-  p.add_argument('--fromsender', required=False) # additional option for --stats
+  p.add_argument('--fromsender', required=True) 
   args = p.parse_args()
 
   mkdirp(args.outfolder)
@@ -229,7 +251,7 @@ if __name__ == '__main__':
 
   if args.msg:
     print "processing message data..."
-    write_messages(d, os.path.join(args.outfolder, "messagedata.csv"), args.hidemessages)
+    write_messages(d, os.path.join(args.outfolder, "messagedata.csv"), args.anonymize, args.fromsender)
 
   if args.plot:
     print "plotting..."
@@ -237,8 +259,6 @@ if __name__ == '__main__':
 
   if args.stats:
     print "getting statistics..."
-    if not args.fromsender:
-      args.fromsender = raw_input('Google email address (i.e. johndoe@gmail.com):  ')
     stats = getstats(messages, args.fromsender)
     print stats
     write_stats(stats, os.path.join(args.outfolder, "stats"))

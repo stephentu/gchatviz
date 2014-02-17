@@ -11,8 +11,11 @@ Allow permissions on these bash scripts:
 
 Then run the script:
 
-> ./getchats.sh
+> ./getchats.sh [your google email address]
 
-You will be prompted to enter your gmail email address and password. The final data will be downloaded to the file called "analyzed".
+Example:
+> ./getchats.sh johndoe@gmail.com 
+
+You will be prompted to enter your gmail password. The final data will be downloaded to the file called "analyzed".
 
 
