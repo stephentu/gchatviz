@@ -8,5 +8,5 @@ do
 	echo "converting $f..." 
 	$PYTHON convert.py $f convertedchats/${f##*/}
 done
-$PYTHON analyze.py --infolder convertedchats/ --outfolder analyzed/ --plot --msg --anonymize --stats --fromsender $1
-tar czvf analyzed.tar.gz analyzed
+$PYTHON analyze.py --infolder convertedchats/ --outfolder testanalyzed/ --plot --msg --anonymize --stats --fromsender $1
+#tar czvf analyzed.tar.gz analyzed
