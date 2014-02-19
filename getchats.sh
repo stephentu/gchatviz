@@ -9,4 +9,4 @@ do
 	$PYTHON convert.py $f convertedchats/${f##*/}
 done
 $PYTHON analyze.py --infolder convertedchats/ --outfolder testanalyzed/ --plot --msg --anonymize --stats --fromsender $1
-#tar czvf analyzed.tar.gz analyzed
+

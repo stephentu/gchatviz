@@ -58,7 +58,7 @@ def write_messages(messages, outfile, anonymize, fromsender):
       if anonymize:
         mess = get_hidden(m._message) # hide message
         if fromsender in m._fromuser: # hide sender (unless chat is authored by fromsender)
-          author = "me"#m._fromuser
+          author = "me"
         else:
           author = get_hash(m._fromuser, uids)
       else:
