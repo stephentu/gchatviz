@@ -58,7 +58,7 @@ def write_messages(messages, outfile, anonymize, fromsender):
       if anonymize:
         mess = get_hidden(m._message) # hide message
         if fromsender in m._fromuser: # hide sender (unless chat is authored by fromsender)
-          author = m._fromuser
+          author = "me"
         else:
           author = get_hash(m._fromuser, uids)
       else:
@@ -251,7 +251,9 @@ if __name__ == '__main__':
 
   if args.msg:
     print "processing message data..."
-    write_messages(d, os.path.join(args.outfolder, "messagedata.csv"), args.anonymize, args.fromsender)
+    if args.anonymize:
+      write_messages(d, os.path.join(args.outfolder, "messagedata-anon.csv"), True, args.fromsender)
+    write_messages(d, os.path.join(args.outfolder, "messagedata.csv"), False, args.fromsender)
 
   if args.plot:
     print "plotting..."
