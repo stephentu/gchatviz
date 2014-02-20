@@ -1,7 +1,7 @@
 #!/bin/bash
 source config.sh
 mkdir -p rawchats convertedchats analyzed
-$PYTHON downloader.py --outfile rawchats/tmp
+$PYTHON downloader.py --outfile rawchats/tmp --username $1
 FILES=rawchats/*
 for f in $FILES
 do
