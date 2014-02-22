@@ -3,6 +3,17 @@ gchat conversation visualizer
 
 Some flaky scripts to log and visualize your chat history via gchat.
 
+# download required python packages
+
+> pip install -r requirements.txt
+
+# download freetype
+
+(OSX)
+> brew install freetype 
+(Linux)
+> apt-get install freetype
+
 Fetch chats by running the script:
 
 > ./getchats.sh [your google email address]

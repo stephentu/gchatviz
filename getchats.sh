@@ -1,5 +1,6 @@
 #!/bin/bash
 source config.sh
+
 mkdir -p rawchats convertedchats analyzed
 $PYTHON downloader.py --outfile rawchats/tmp --username $1
 FILES=rawchats/*

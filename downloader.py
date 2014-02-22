@@ -91,7 +91,7 @@ def download(args):
   mail.login(args.username, args.password)
   stat, msg = mail.select('[Gmail]/Chats', True)
   if stat != 'OK':
-    error("Could not open chats folder: " + msg)
+    error("Could not open chats folder: %s" % msg)
 
   #import pdb; pdb.set_trace()
 
