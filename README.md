@@ -9,10 +9,11 @@ Some flaky scripts to log and visualize your chat history via gchat.
 
 # download freetype
 
-(OSX)
+Mac OS X
 > brew install freetype 
-(Linux)
-> apt-get install freetype
+
+Ubuntu
+> sudo apt-get install freetype
 
 Fetch chats by running the script:
 
